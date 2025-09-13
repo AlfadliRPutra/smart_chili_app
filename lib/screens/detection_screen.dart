@@ -1,11 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+
+import 'camera_screen.dart';
+import 'result_screen.dart'; // ✅ layar baru untuk hasil
+import '../controllers/yolo_controller.dart';
 
 class DetectionScreen extends StatelessWidget {
   const DetectionScreen({super.key});
 
+  Future<void> _pickImage(YoloController controller) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      await controller.predict(bytes); // jalankan YOLO
+
+      // ✅ pindah ke ResultScreen
+      Get.to(() => ResultScreen(imageBytes: bytes));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(YoloController());
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
@@ -20,7 +41,7 @@ class DetectionScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             /// === Detection Card ===
-            _buildDetectionCard(),
+            _buildDetectionCard(controller),
 
             const SizedBox(height: 24),
 
@@ -30,29 +51,31 @@ class DetectionScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
+
             _buildDiseaseCard(
-              name: 'Leaf Spot',
+              name: 'Bercak',
               desc:
-                  'Small brown or black spots on leaves that may grow and merge.',
+                  'Muncul bercak cokelat atau hitam pada daun yang bisa menyatu.',
               severity: 'Medium',
               severityColor: Colors.amber,
             ),
             _buildDiseaseCard(
-              name: 'Powdery Mildew',
-              desc: 'White powdery spots on upper leaf surfaces.',
-              severity: 'Medium',
-              severityColor: Colors.amber,
-            ),
-            _buildDiseaseCard(
-              name: 'Leaf Curl',
-              desc: 'Curled, distorted leaves often caused by viruses.',
+              name: 'Keriting',
+              desc: 'Daun melengkung/keriting, biasanya akibat serangan virus.',
               severity: 'High',
               severityColor: Colors.red,
             ),
             _buildDiseaseCard(
-              name: 'Root Rot',
+              name: 'Kuning',
               desc:
-                  'Causes wilting and yellowing despite adequate soil moisture.',
+                  'Daun menguning, bisa disebabkan jamur, bakteri, atau kekurangan nutrisi.',
+              severity: 'Medium',
+              severityColor: Colors.amber,
+            ),
+            _buildDiseaseCard(
+              name: 'Whitefly',
+              desc:
+                  'Daun ditutupi serangga putih kecil (kutu kebul) yang menghisap cairan daun.',
               severity: 'High',
               severityColor: Colors.red,
             ),
@@ -76,14 +99,15 @@ class DetectionScreen extends StatelessWidget {
           icon: const Icon(Icons.camera_alt),
           label: const Text("Open Camera for Quick Scan"),
           onPressed: () {
-            // TODO: Aksi buka kamera
+            Get.to(() => const CameraScreen());
           },
         ),
       ),
     );
   }
 
-  Widget _buildDetectionCard() {
+  /// === Detection Card ===
+  Widget _buildDetectionCard(YoloController controller) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
@@ -91,7 +115,6 @@ class DetectionScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            /// Header
             Row(
               children: const [
                 Icon(Icons.eco_outlined, color: Colors.green),
@@ -107,86 +130,33 @@ class DetectionScreen extends StatelessWidget {
               'Take a photo or upload an image of chili leaves for disease detection',
               style: TextStyle(fontSize: 13),
             ),
-
             const SizedBox(height: 12),
 
-            /// Toggle Buttons
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {},
-                    child: const Text('Take Photo'),
+                    onPressed: () {
+                      Get.to(() => const CameraScreen());
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green[700],
                     ),
+                    child: const Text('Take Photo'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {},
-                    child: const Text('Upload Image'),
+                    onPressed: () => _pickImage(controller),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green[200],
                       foregroundColor: Colors.black,
                     ),
+                    child: const Text('Upload Image'),
                   ),
                 ),
               ],
-            ),
-
-            const SizedBox(height: 16),
-
-            /// Photo Placeholder
-            GestureDetector(
-              onTap: () {
-                // TODO: Handle image upload or camera open
-              },
-              child: Container(
-                width: double.infinity,
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(
-                      Icons.photo_camera_outlined,
-                      size: 36,
-                      color: Colors.grey,
-                    ),
-                    SizedBox(height: 8),
-                    Text("Tap to take a photo of chili leaves"),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            /// Open Camera Button
-            ElevatedButton(
-              onPressed: () {
-                // TODO: Open camera logic
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text("Open Camera"),
-            ),
-
-            const SizedBox(height: 8),
-            const Text(
-              'Our AI can detect common chili plant diseases with 95% accuracy',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -194,6 +164,7 @@ class DetectionScreen extends StatelessWidget {
     );
   }
 
+  /// === Disease Card ===
   Widget _buildDiseaseCard({
     required String name,
     required String desc,

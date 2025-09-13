@@ -17,7 +17,7 @@ class MonitoringScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              // TODO: Handle refresh
+              // TODO: Handle Refrsh
             },
           ),
         ],
@@ -141,7 +141,7 @@ class MonitoringScreen extends StatelessWidget {
                       barWidth: 2,
                       belowBarData: BarAreaData(
                         show: true,
-                        color: const Color(0xFF89C17A).withOpacity(0.2),
+                        color: const Color(0xFF89C17A).withValues(alpha: 51),
                       ),
                       dotData: FlDotData(show: false),
                     ),

@@ -106,3 +106,10 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release
   COMPONENT Runtime)
+
+# get tf lite binaries
+install(
+  FILES ${PROJECT_SOURCE_DIR}/../blobs/libtensorflowlite_c-win.dll
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/blobs"
+  COMPONENT Runtime
+)

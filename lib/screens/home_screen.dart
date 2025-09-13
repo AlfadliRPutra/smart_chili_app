@@ -15,7 +15,7 @@ class HomeScreen extends StatelessWidget {
   final NavController navController = Get.put(NavController());
 
   final List<Widget> pages = [
-    const _DashboardView(), // Ganti halaman pertama dengan custom dashboard view
+    const _DashboardView(),
     const DetectionScreen(),
     const MonitoringScreen(),
   ];
