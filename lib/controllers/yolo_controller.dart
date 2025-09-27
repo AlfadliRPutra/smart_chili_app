@@ -8,15 +8,15 @@ import 'package:image/image.dart' as img;
 
 /// Struktur data untuk 1 hasil deteksi
 class Detection {
-  final double x, y, w, h;
+  final double x1, y1, x2, y2;
   final String label;
   final double confidence;
 
   Detection({
-    required this.x,
-    required this.y,
-    required this.w,
-    required this.h,
+    required this.x1,
+    required this.y1,
+    required this.x2,
+    required this.y2,
     required this.label,
     required this.confidence,
   });
@@ -100,120 +100,150 @@ class YoloController extends GetxController {
     var input = preprocess(inputBytes).reshape([1, height, width, 3]);
 
     /// --- OUTPUT SHAPE ---
-    final outputShape = _interpreter.getOutputTensor(0).shape;
-    final numAttrs = outputShape[1];
-    final numAnchors = outputShape[2];
+    final outputShape = _interpreter.getOutputTensor(0).shape; // [1, 9, N]
+    final numAttrs = outputShape[1]; // 4 + num_classes
+    final numPreds = outputShape[2]; // jumlah kandidat box
 
     var output = List.filled(
-      1 * numAttrs * numAnchors,
+      1 * numAttrs * numPreds,
       0.0,
-    ).reshape([1, numAttrs, numAnchors]);
+    ).reshape([1, numAttrs, numPreds]);
 
     _interpreter.run(input, output);
 
-    /// --- TRANSPOSE OUTPUT ---
+    /// --- TRANSPOSE OUTPUT [1,9,N] → [N,9] ---
     List<List<double>> predictions = List.generate(
-      numAnchors,
+      numPreds,
       (i) => List.generate(numAttrs, (j) => output[0][j][i].toDouble()),
     );
 
-    /// Debug print (cek struktur prediksi pertama)
-    if (predictions.isNotEmpty) {
-      print(
-        "🔍 Sample pred length = ${predictions[0].length}, values = ${predictions[0]}",
-      );
-    }
+    print("🔢 Output shape: ${predictions.length} x ${predictions[0].length}");
+    print("🔍 Sample pred[0]: ${predictions[0]}");
 
     /// --- POSTPROCESS ---
-    detections.value = processOutput(
+    detections.value = _postprocess(
       predictions,
       labels,
+      origW: width.toDouble(),
+      origH: height.toDouble(),
       confThreshold: 0.4,
       iouThreshold: 0.5,
     );
+
+    print("📦 Final detections: ${detections.length}");
+    for (var d in detections) {
+      print(
+        " → ${d.label} (${d.confidence.toStringAsFixed(2)}) [${d.x1.toInt()},${d.y1.toInt()},${d.x2.toInt()},${d.y2.toInt()}]",
+      );
+    }
   }
 
   // ======================
   // === Postprocessing ===
   // ======================
 
-  double sigmoid(double x) => 1 / (1 + math.exp(-x));
-
-  List<Detection> processOutput(
+  List<Detection> _postprocess(
     List<List<double>> output,
     List<String> labels, {
+    required double origW,
+    required double origH,
     double confThreshold = 0.4,
     double iouThreshold = 0.5,
   }) {
-    final results = <Detection>[];
+    final boxes = <List<double>>[];
+    final scores = <double>[];
+    final classIds = <int>[];
 
-    for (int i = 0; i < output.length; i++) {
-      final pred = output[i];
+    for (var pred in output) {
+      final xc = pred[0] * origW;
+      final yc = pred[1] * origH;
+      final w = pred[2] * origW;
+      final h = pred[3] * origH;
 
-      if (pred.length < 6) continue; // minimal: x,y,w,h,obj_conf,1 kelas
+      final classScores = pred.sublist(4);
+      final clsId = _argmax(classScores);
+      final conf = classScores[clsId];
 
-      final x = pred[0];
-      final y = pred[1];
-      final w = pred[2];
-      final h = pred[3];
-      final objConf = sigmoid(pred[4]);
+      if (conf > confThreshold) {
+        final x1 = xc - w / 2;
+        final y1 = yc - h / 2;
+        final x2 = xc + w / 2;
+        final y2 = yc + h / 2;
 
-      final numClasses = pred.length - 5; // auto detect jumlah kelas
-      double maxClassScore = 0;
-      int classIndex = -1;
-
-      for (int c = 0; c < numClasses; c++) {
-        final score = sigmoid(pred[5 + c]);
-        if (score > maxClassScore) {
-          maxClassScore = score;
-          classIndex = c;
-        }
-      }
-
-      final confidence = objConf * maxClassScore;
-      if (confidence > confThreshold &&
-          classIndex != -1 &&
-          classIndex < labels.length) {
-        results.add(
-          Detection(
-            x: x - w / 2,
-            y: y - h / 2,
-            w: w,
-            h: h,
-            label: labels[classIndex],
-            confidence: confidence,
-          ),
-        );
+        boxes.add([x1, y1, x2, y2]);
+        scores.add(conf);
+        classIds.add(clsId);
       }
     }
 
-    return nonMaxSuppression(results, iouThreshold);
-  }
+    if (boxes.isEmpty) return [];
 
-  List<Detection> nonMaxSuppression(
-    List<Detection> detections,
-    double iouThreshold,
-  ) {
-    detections.sort((a, b) => b.confidence.compareTo(a.confidence));
+    final keep = _nms(boxes, scores, iouThreshold);
+
     final results = <Detection>[];
-
-    while (detections.isNotEmpty) {
-      final best = detections.removeAt(0);
-      results.add(best);
-      detections.removeWhere((d) => boxIoU(best, d) > iouThreshold);
+    for (var i in keep) {
+      results.add(
+        Detection(
+          x1: boxes[i][0],
+          y1: boxes[i][1],
+          x2: boxes[i][2],
+          y2: boxes[i][3],
+          label: (classIds[i] < labels.length)
+              ? labels[classIds[i]]
+              : "unknown",
+          confidence: scores[i],
+        ),
+      );
     }
 
     return results;
   }
 
-  double boxIoU(Detection a, Detection b) {
-    final x1 = math.max(a.x, b.x);
-    final y1 = math.max(a.y, b.y);
-    final x2 = math.min(a.x + a.w, b.x + b.w);
-    final y2 = math.min(a.y + a.h, b.y + b.h);
+  List<int> _nms(List<List<double>> boxes, List<double> scores, double iouTh) {
+    final idxs = List<int>.generate(scores.length, (i) => i).toList();
+    idxs.sort((a, b) => scores[b].compareTo(scores[a]));
 
-    final interArea = math.max(0, x2 - x1) * math.max(0, y2 - y1);
-    final unionArea = (a.w * a.h) + (b.w * b.h) - interArea;
-    return unionArea <= 0 ? 0 : interArea / unionArea;
+    final keep = <int>[];
+
+    while (idxs.isNotEmpty) {
+      final i = idxs.removeAt(0);
+      keep.add(i);
+
+      final remaining = <int>[];
+      for (final j in idxs) {
+        final xx1 = math.max(boxes[i][0], boxes[j][0]);
+        final yy1 = math.max(boxes[i][1], boxes[j][1]);
+        final xx2 = math.min(boxes[i][2], boxes[j][2]);
+        final yy2 = math.min(boxes[i][3], boxes[j][3]);
+
+        final interW = math.max(0.0, xx2 - xx1);
+        final interH = math.max(0.0, yy2 - yy1);
+        final interArea = interW * interH;
+
+        final areaI = (boxes[i][2] - boxes[i][0]) * (boxes[i][3] - boxes[i][1]);
+        final areaJ = (boxes[j][2] - boxes[j][0]) * (boxes[j][3] - boxes[j][1]);
+        final union = areaI + areaJ - interArea;
+
+        final iou = union <= 0 ? 0.0 : interArea / union;
+        if (iou < iouTh) remaining.add(j);
+      }
+      idxs
+        ..clear()
+        ..addAll(remaining);
+    }
+
+    return keep;
+  }
+
+  int _argmax(List<double> array) {
+    double maxVal = -double.infinity;
+    int maxIdx = -1;
+    for (int i = 0; i < array.length; i++) {
+      if (array[i] > maxVal) {
+        maxVal = array[i];
+        maxIdx = i;
+      }
+    }
+    return maxIdx;
   }
 }
