@@ -29,6 +29,7 @@ class YoloController extends GetxController {
   var labels = <String>[];
 
   late List<int> inputShape; // [1, H, W, 3]
+  int? origW, origH; // ukuran asli gambar
 
   @override
   void onInit() {
@@ -70,6 +71,9 @@ class YoloController extends GetxController {
   Float32List preprocess(Uint8List inputBytes) {
     final decoded = img.decodeImage(inputBytes);
     if (decoded == null) throw Exception("Failed to decode image");
+
+    origW = decoded.width;
+    origH = decoded.height;
 
     final height = inputShape[1];
     final width = inputShape[2];
@@ -120,12 +124,12 @@ class YoloController extends GetxController {
     print("🔢 Output shape: ${predictions.length} x ${predictions[0].length}");
     print("🔍 Sample pred[0]: ${predictions[0]}");
 
-    /// --- POSTPROCESS ---
+    /// --- POSTPROCESS pakai ukuran asli ---
     detections.value = _postprocess(
       predictions,
       labels,
-      origW: width.toDouble(),
-      origH: height.toDouble(),
+      origW: origW!.toDouble(),
+      origH: origH!.toDouble(),
       confThreshold: 0.4,
       iouThreshold: 0.5,
     );
@@ -133,7 +137,8 @@ class YoloController extends GetxController {
     print("📦 Final detections: ${detections.length}");
     for (var d in detections) {
       print(
-        " → ${d.label} (${d.confidence.toStringAsFixed(2)}) [${d.x1.toInt()},${d.y1.toInt()},${d.x2.toInt()},${d.y2.toInt()}]",
+        " → ${d.label} (${d.confidence.toStringAsFixed(2)}) "
+        "[${d.x1.toInt()},${d.y1.toInt()},${d.x2.toInt()},${d.y2.toInt()}]",
       );
     }
   }
@@ -155,20 +160,20 @@ class YoloController extends GetxController {
     final classIds = <int>[];
 
     for (var pred in output) {
-      final xc = pred[0] * origW;
-      final yc = pred[1] * origH;
-      final w = pred[2] * origW;
-      final h = pred[3] * origH;
+      final xc = pred[0];
+      final yc = pred[1];
+      final w = pred[2];
+      final h = pred[3];
 
       final classScores = pred.sublist(4);
       final clsId = _argmax(classScores);
       final conf = classScores[clsId];
 
       if (conf > confThreshold) {
-        final x1 = xc - w / 2;
-        final y1 = yc - h / 2;
-        final x2 = xc + w / 2;
-        final y2 = yc + h / 2;
+        final x1 = (xc - w / 2) * origW;
+        final y1 = (yc - h / 2) * origH;
+        final x2 = (xc + w / 2) * origW;
+        final y2 = (yc + h / 2) * origH;
 
         boxes.add([x1, y1, x2, y2]);
         scores.add(conf);

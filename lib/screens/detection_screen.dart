@@ -30,10 +30,11 @@ class DetectionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
-        title: const Text('Leaf Disease Detection'),
+        title: const Text('Detection'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0.5,
+        toolbarHeight: 40,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

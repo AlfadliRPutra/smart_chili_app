@@ -13,6 +13,7 @@ class MonitoringScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0.5,
+        toolbarHeight: 40,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

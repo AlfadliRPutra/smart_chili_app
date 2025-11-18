@@ -102,46 +102,6 @@ class _DashboardView extends StatelessWidget {
               ),
             ],
           ),
-
-          const SizedBox(height: 24),
-          const Text(
-            "Plant Health",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const PlantHealthCard(),
-
-          const SizedBox(height: 24),
-          const Text(
-            "Quick Actions",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: QuickActionButton(
-                  icon: Icons.camera_alt,
-                  title: "Scan Leaf",
-                  subtitle: "Detect diseases",
-                  onTap: () {
-                    // Aksi ketika Scan Leaf ditekan
-                  },
-                ),
-              ),
-              const SizedBox(width: 12), // jarak antar tombol
-              Expanded(
-                child: QuickActionButton(
-                  icon: Icons.insert_chart,
-                  title: "Farm Report",
-                  subtitle: "View analysis",
-                  onTap: () {
-                    // Aksi ketika Farm Report ditekan
-                  },
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 24),
         ],
       ),

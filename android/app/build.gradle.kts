@@ -9,6 +9,7 @@ android {
     namespace = "com.example.smart_chili_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -35,6 +36,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // ✅ Aktifkan minify untuk release
+            isMinifyEnabled = true
+
+            // ✅ Gunakan file Proguard khusus untuk TensorFlow
+            proguardFiles(
+                "proguard-guide.pro"
+            )
         }
     }
 }
