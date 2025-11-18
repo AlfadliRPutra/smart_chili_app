@@ -1,16 +1,39 @@
-# smart_chili_app
+# 🌶️ Smart Chili App
 
-A new Flutter project.
+Aplikasi **Flutter** untuk mendeteksi penyakit daun cabai menggunakan **YOLO** dan **GetX**.  
+Mendukung **Android** dan **Web**.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚀 Fitur
+- Deteksi penyakit cabai dengan model YOLO.  
+- Input gambar dari kamera atau galeri.  
+- GetX untuk state management.  
+- Support Android & Web.
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🧠 Teknologi
+- Flutter  
+- GetX  
+- YOLO (TFLite/ONNX)  
+- TensorFlow Lite / API backend (opsional)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## ⚙️ Cara Menjalankan
+```bash
+git clone https://github.com/blabla/smart_chili_app.git
+cd smart_chili_app
+flutter pub get
+flutter run
+````
+
+Untuk web:
+
+```bash
+flutter run -d chrome
+```
+
+
+
